@@ -6,7 +6,7 @@ namespace BulkImagesOptimizer;
 
 internal static class ImageExporter
 {
-    public static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, int outputMode, EnhancementSettings? enhancement = null)
+    public static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, int outputMode)
     {
         string extension = OutputFormat.ResolveExtension(source, outputMode);
         bool jpeg = !extension.Equals(".png", StringComparison.OrdinalIgnoreCase);
@@ -36,7 +36,6 @@ internal static class ImageExporter
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             graphics.DrawImage(image, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
         }
-        if (enhancement is not null) ApplyEnhancement(bitmap, enhancement);
         if (!jpeg) ReducePngColors(bitmap, pngQuality);
         string stem = Path.GetFileNameWithoutExtension(source);
         // CreateNew prevents replacing originals or an earlier export.
@@ -62,23 +61,6 @@ internal static class ImageExporter
             catch { File.Delete(target); throw; }
             return;
         }
-    }
-
-    private static void ApplyEnhancement(Bitmap bitmap, EnhancementSettings settings)
-    {
-        var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-            ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
-        try
-        {
-            int rowSize = checked(bitmap.Width * 4);
-            var pixels = new byte[checked(rowSize * bitmap.Height)];
-            for (int y = 0; y < bitmap.Height; y++)
-                Marshal.Copy(IntPtr.Add(data.Scan0, y * data.Stride), pixels, y * rowSize, rowSize);
-            ImageEnhancement.Apply(pixels, bitmap.Width, bitmap.Height, settings);
-            for (int y = 0; y < bitmap.Height; y++)
-                Marshal.Copy(pixels, y * rowSize, IntPtr.Add(data.Scan0, y * data.Stride), rowSize);
-        }
-        finally { bitmap.UnlockBits(data); }
     }
 
     private static void ReducePngColors(Bitmap bitmap, int quality)
