@@ -22,7 +22,7 @@ public sealed class MainForm : Form
         ClientSize = new Size(940, 560);
         MinimumSize = new Size(760, 420);
         Font = new Font("Segoe UI", 10);
-        format.Items.AddRange(["JPEG", "PNG"]);
+        format.Items.AddRange([".jpg", ".png"]);
         format.SelectedIndex = 0;
         var add = new Button { Text = "Add images", AutoSize = true };
         var clear = new Button { Text = "Clear list", AutoSize = true };
@@ -37,7 +37,8 @@ public sealed class MainForm : Form
         optimize.Click += async (_, _) => await OptimizeAsync();
         controls.Controls.AddRange([add, clear, new Label { Text = "Max width", AutoSize = true }, width,
             new Label { Text = "Max height", AutoSize = true }, height,
-            new Label { Text = "JPEG quality", AutoSize = true }, quality, format]);
+            new Label { Text = "JPEG quality", AutoSize = true }, quality,
+            new Label { Text = "Output extension", AutoSize = true }, format]);
         var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(8) };
         bottom.Controls.AddRange([browse, output, optimize, status]);
         Controls.Add(files);
@@ -128,7 +129,7 @@ public sealed class MainForm : Form
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             graphics.DrawImage(image, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
         }
-        string stem = Path.GetFileNameWithoutExtension(source) + "_optimized";
+        string stem = Path.GetFileNameWithoutExtension(source);
         string extension = jpeg ? ".jpg" : ".png";
         // CreateNew prevents replacing originals or an earlier export.
         for (int suffix = 0; ; suffix++)
