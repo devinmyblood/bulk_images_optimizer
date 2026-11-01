@@ -4,7 +4,7 @@ A Windows Forms desktop application for batch resizing and exporting images.
 
 ## Develop and run
 
-Install the .NET 10 SDK on Windows, or Visual Studio with .NET 10 support and the **.NET desktop development** workload. Open `bulk_images_optimizer.csproj` in Visual Studio and press F5, or run:
+Install Visual Studio 2022 version 17.8 or later with the **.NET desktop development** workload and the .NET 8 SDK. The project targets .NET 8 LTS. Open `bulk_images_optimizer.csproj` in Visual Studio and press F5, or run:
 
 ```powershell
 dotnet build
