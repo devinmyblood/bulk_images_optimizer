@@ -20,6 +20,10 @@ public sealed class MainForm : Form
         ClientSize = new Size(940, 560);
         MinimumSize = new Size(760, 420);
         Font = new Font("Segoe UI", 10);
+        output.Text = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures,
+            Environment.SpecialFolderOption.DoNotVerify);
+        if (string.IsNullOrWhiteSpace(output.Text))
+            output.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Pictures");
         format.Items.AddRange([".jpg", ".png", "All (original)"]);
         format.SelectedIndex = 0;
         format.SelectedIndexChanged += (_, _) =>
@@ -34,7 +38,7 @@ public sealed class MainForm : Form
         clear.Click += (_, _) => { files.Items.Clear(); status.Text = "List cleared."; };
         browse.Click += (_, _) =>
         {
-            using var dialog = new FolderBrowserDialog();
+            using var dialog = new FolderBrowserDialog { SelectedPath = output.Text };
             if (dialog.ShowDialog(this) == DialogResult.OK) output.Text = dialog.SelectedPath;
         };
         optimize.Click += async (_, _) => await OptimizeAsync();
