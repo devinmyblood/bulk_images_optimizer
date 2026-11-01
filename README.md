@@ -11,6 +11,8 @@ dotnet build
 dotnet run
 ```
 
+The project explicitly uses `BulkImagesOptimizer.Program` as its startup object, which opens `MainForm`. In a Visual Studio solution with multiple projects, right-click **bulk_images_optimizer** and choose **Set as Startup Project** to launch it with F5.
+
 Add images, set maximum dimensions and JPEG quality, choose `.jpg` or `.png` under **Output extension**, choose an output folder, and click **Optimize images**. Exports keep the original base filename with the selected extension. If a filename already exists, a numeric suffix such as `_1` is added to avoid overwriting it. Aspect ratio is preserved; small images are never enlarged. JPEG flattens transparency onto white; PNG preserves transparency. Exports omit source metadata and use only the first frame of animated/multipage images. Output size may exceed the original, particularly for PNG.
 
 The shared UI is defined in C# in `BatchImageForm.cs`, with `MainForm.cs` and `ImageEnhancerForm.cs` selecting the workflow. Running the application requires Windows; Linux can cross-compile with the .NET SDK and Windows targeting packs but cannot run WinForms.
