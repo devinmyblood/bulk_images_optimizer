@@ -14,3 +14,7 @@ dotnet run
 Add images, set maximum dimensions and JPEG quality, choose `.jpg` or `.png` under **Output extension**, choose an output folder, and click **Optimize images**. Exports keep the original base filename with the selected extension. If a filename already exists, a numeric suffix such as `_1` is added to avoid overwriting it. Aspect ratio is preserved; small images are never enlarged. JPEG flattens transparency onto white; PNG preserves transparency. Exports omit source metadata and use only the first frame of animated/multipage images. Output size may exceed the original, particularly for PNG.
 
 The UI is defined in C# in `MainForm.cs`. Running the application requires Windows; Linux can cross-compile with the .NET SDK and Windows targeting packs but cannot run WinForms.
+
+## PNG quality
+
+Select `.png` to enable **PNG quality** (1–100). Lower values reduce RGB color precision before PNG compression, trading color detail for potentially smaller files. At 100, full RGB precision is retained. Alpha transparency is preserved at every quality setting. JPEG and PNG have separate quality inputs; only the selected format's input is enabled. PNG file sizes depend on image content and are not guaranteed to be smaller than the source, especially when converting JPEG photographs.

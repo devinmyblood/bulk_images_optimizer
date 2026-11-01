@@ -1,5 +1,6 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace BulkImagesOptimizer;
 
@@ -9,6 +10,7 @@ public sealed class MainForm : Form
     private readonly NumericUpDown width = new() { Minimum = 1, Maximum = 30000, Value = 1920, Width = 85 };
     private readonly NumericUpDown height = new() { Minimum = 1, Maximum = 30000, Value = 1080, Width = 85 };
     private readonly NumericUpDown quality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65 };
+    private readonly NumericUpDown pngQuality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65, Enabled = false };
     private readonly ComboBox format = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 85 };
     private readonly TextBox output = new() { Width = 360, ReadOnly = true };
     private readonly Label status = new() { AutoSize = true, Text = "Add images to get started.", Padding = new Padding(0, 8, 0, 0) };
@@ -24,6 +26,11 @@ public sealed class MainForm : Form
         Font = new Font("Segoe UI", 10);
         format.Items.AddRange([".jpg", ".png"]);
         format.SelectedIndex = 0;
+        format.SelectedIndexChanged += (_, _) =>
+        {
+            quality.Enabled = format.SelectedIndex == 0;
+            pngQuality.Enabled = format.SelectedIndex == 1;
+        };
         var add = new Button { Text = "Add images", AutoSize = true };
         var clear = new Button { Text = "Clear list", AutoSize = true };
         var browse = new Button { Text = "Output folder…", AutoSize = true };
@@ -38,6 +45,7 @@ public sealed class MainForm : Form
         controls.Controls.AddRange([add, clear, new Label { Text = "Max width", AutoSize = true }, width,
             new Label { Text = "Max height", AutoSize = true }, height,
             new Label { Text = "JPEG quality", AutoSize = true }, quality,
+            new Label { Text = "PNG quality", AutoSize = true }, pngQuality,
             new Label { Text = "Output extension", AutoSize = true }, format]);
         var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(8) };
         bottom.Controls.AddRange([browse, output, optimize, status]);
@@ -71,6 +79,7 @@ public sealed class MainForm : Form
         var destination = output.Text;
         int maxWidth = (int)width.Value, maxHeight = (int)height.Value;
         long jpegQuality = (long)quality.Value;
+        int selectedPngQuality = (int)pngQuality.Value;
         bool jpeg = format.SelectedIndex == 0;
         var errors = new List<string>();
         progress.Maximum = paths.Length;
@@ -89,7 +98,7 @@ public sealed class MainForm : Form
                 Directory.CreateDirectory(destination);
                 for (int i = 0; i < paths.Length; i++)
                 {
-                    try { Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, jpeg); }
+                    try { Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, selectedPngQuality, jpeg); }
                     catch (Exception ex) { errors.Add($"{Path.GetFileName(paths[i])}: {ex.Message}"); }
                     ((IProgress<int>)reporter).Report(i + 1);
                 }
@@ -101,7 +110,7 @@ public sealed class MainForm : Form
         finally { controls.Enabled = true; optimize.Parent!.Enabled = true; }
     }
 
-    private static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, bool jpeg)
+    private static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, bool jpeg)
     {
         using var image = Image.FromFile(source);
         // Apply camera orientation before calculating the bounding box.
@@ -129,6 +138,7 @@ public sealed class MainForm : Form
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             graphics.DrawImage(image, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
         }
+        if (!jpeg) ReducePngColors(bitmap, pngQuality);
         string stem = Path.GetFileNameWithoutExtension(source);
         string extension = jpeg ? ".jpg" : ".png";
         // CreateNew prevents replacing originals or an earlier export.
@@ -154,5 +164,35 @@ public sealed class MainForm : Form
             catch { File.Delete(target); throw; }
             return;
         }
+    }
+
+    private static void ReducePngColors(Bitmap bitmap, int quality)
+    {
+        // PNG has no JPEG-style encoder quality setting. Quantize RGB before
+        // lossless PNG encoding; preserve the alpha channel at full precision.
+        if (quality >= 100) return;
+        int levels = 2 + (int)Math.Round(254 * Math.Pow((quality - 1) / 99.0, 3));
+        var lookup = new byte[256];
+        for (int i = 0; i < lookup.Length; i++)
+            lookup[i] = (byte)Math.Round(Math.Round(i * (levels - 1) / 255.0) * 255 / (levels - 1));
+        var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+            ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+        try
+        {
+            var row = new byte[bitmap.Width * 4];
+            for (int y = 0; y < bitmap.Height; y++)
+            {
+                var address = IntPtr.Add(data.Scan0, y * data.Stride);
+                Marshal.Copy(address, row, 0, row.Length);
+                for (int x = 0; x < row.Length; x += 4)
+                {
+                    row[x] = lookup[row[x]];
+                    row[x + 1] = lookup[row[x + 1]];
+                    row[x + 2] = lookup[row[x + 2]];
+                }
+                Marshal.Copy(row, 0, address, row.Length);
+            }
+        }
+        finally { bitmap.UnlockBits(data); }
     }
 }
