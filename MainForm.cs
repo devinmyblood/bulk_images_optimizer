@@ -11,7 +11,7 @@ public sealed class MainForm : Form
     private readonly NumericUpDown height = new() { Minimum = 1, Maximum = 30000, Value = 1080, Width = 85 };
     private readonly NumericUpDown quality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65 };
     private readonly NumericUpDown pngQuality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65, Enabled = false };
-    private readonly ComboBox format = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 85 };
+    private readonly ComboBox format = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
     private readonly TextBox output = new() { Width = 360, ReadOnly = true };
     private readonly Label status = new() { AutoSize = true, Text = "Add images to get started.", Padding = new Padding(0, 8, 0, 0) };
     private readonly ProgressBar progress = new() { Dock = DockStyle.Bottom, Height = 22 };
@@ -24,12 +24,12 @@ public sealed class MainForm : Form
         ClientSize = new Size(940, 560);
         MinimumSize = new Size(760, 420);
         Font = new Font("Segoe UI", 10);
-        format.Items.AddRange([".jpg", ".png"]);
+        format.Items.AddRange([".jpg", ".png", "All (original)"]);
         format.SelectedIndex = 0;
         format.SelectedIndexChanged += (_, _) =>
         {
-            quality.Enabled = format.SelectedIndex == 0;
-            pngQuality.Enabled = format.SelectedIndex == 1;
+            quality.Enabled = format.SelectedIndex != 1;
+            pngQuality.Enabled = format.SelectedIndex != 0;
         };
         var add = new Button { Text = "Add images", AutoSize = true };
         var clear = new Button { Text = "Clear list", AutoSize = true };
@@ -80,7 +80,7 @@ public sealed class MainForm : Form
         int maxWidth = (int)width.Value, maxHeight = (int)height.Value;
         long jpegQuality = (long)quality.Value;
         int selectedPngQuality = (int)pngQuality.Value;
-        bool jpeg = format.SelectedIndex == 0;
+        int outputMode = format.SelectedIndex;
         var errors = new List<string>();
         progress.Maximum = paths.Length;
         progress.Value = 0;
@@ -98,7 +98,7 @@ public sealed class MainForm : Form
                 Directory.CreateDirectory(destination);
                 for (int i = 0; i < paths.Length; i++)
                 {
-                    try { Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, selectedPngQuality, jpeg); }
+                    try { Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, selectedPngQuality, outputMode); }
                     catch (Exception ex) { errors.Add($"{Path.GetFileName(paths[i])}: {ex.Message}"); }
                     ((IProgress<int>)reporter).Report(i + 1);
                 }
@@ -110,8 +110,10 @@ public sealed class MainForm : Form
         finally { controls.Enabled = true; optimize.Parent!.Enabled = true; }
     }
 
-    private static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, bool jpeg)
+    private static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, int outputMode)
     {
+        string extension = OutputFormat.ResolveExtension(source, outputMode);
+        bool jpeg = !extension.Equals(".png", StringComparison.OrdinalIgnoreCase);
         using var image = Image.FromFile(source);
         // Apply camera orientation before calculating the bounding box.
         if (image.PropertyIdList.Contains(0x0112))
@@ -140,7 +142,6 @@ public sealed class MainForm : Form
         }
         if (!jpeg) ReducePngColors(bitmap, pngQuality);
         string stem = Path.GetFileNameWithoutExtension(source);
-        string extension = jpeg ? ".jpg" : ".png";
         // CreateNew prevents replacing originals or an earlier export.
         for (int suffix = 0; ; suffix++)
         {

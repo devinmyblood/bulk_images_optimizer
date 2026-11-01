@@ -17,4 +17,8 @@ The UI is defined in C# in `MainForm.cs`. Running the application requires Windo
 
 ## PNG quality
 
-Select `.png` to enable **PNG quality** (1–100). Lower values reduce RGB color precision before PNG compression, trading color detail for potentially smaller files. At 100, full RGB precision is retained. Alpha transparency is preserved at every quality setting. JPEG and PNG have separate quality inputs; only the selected format's input is enabled. PNG file sizes depend on image content and are not guaranteed to be smaller than the source, especially when converting JPEG photographs.
+Select `.png` to enable **PNG quality** (1–100). Lower values reduce RGB color precision before PNG compression, trading color detail for potentially smaller files. At 100, full RGB precision is retained. Alpha transparency is preserved at every quality setting. JPEG and PNG have separate quality inputs. PNG file sizes depend on image content and are not guaranteed to be smaller than the source, especially when converting JPEG photographs.
+
+## Mixed JPG and PNG batches
+
+Choose **All (original)** under **Output extension** to keep each JPG, JPEG and PNG image's original extension, including its letter case. Both quality inputs are enabled: **JPEG quality** applies to JPG/JPEG images and **PNG quality** applies to PNG images. Original base filenames and overwrite protection still apply. Other source formats are reported as failed in this mode; choose `.jpg` or `.png` to convert those formats instead.
