@@ -6,11 +6,13 @@ namespace BulkImagesOptimizer;
 
 internal static class ImageExporter
 {
-    public static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, int outputMode)
+    public static void Export(string source, string destination, int maxWidth, int maxHeight, long quality, int pngQuality, int outputMode, int webpQuality = 85)
     {
         string extension = OutputFormat.ResolveExtension(source, outputMode);
-        bool jpeg = !extension.Equals(".png", StringComparison.OrdinalIgnoreCase);
-        using var image = Image.FromFile(source);
+        bool png = extension.Equals(".png", StringComparison.OrdinalIgnoreCase);
+        bool webp = extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
+        bool jpeg = !png && !webp;
+        using var image = LoadImage(source);
         // Apply camera orientation before calculating the bounding box.
         if (image.PropertyIdList.Contains(0x0112))
         {
@@ -36,7 +38,7 @@ internal static class ImageExporter
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             graphics.DrawImage(image, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
         }
-        if (!jpeg) ReducePngColors(bitmap, pngQuality);
+        if (png) ReducePngColors(bitmap, pngQuality);
         string stem = Path.GetFileNameWithoutExtension(source);
         // CreateNew prevents replacing originals or an earlier export.
         for (int suffix = 0; ; suffix++)
@@ -55,12 +57,32 @@ internal static class ImageExporter
                         parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
                         bitmap.Save(stream, ImageCodecInfo.GetImageEncoders().First(codec => codec.FormatID == ImageFormat.Jpeg.Guid), parameters);
                     }
+                    else if (webp)
+                    {
+                        using var pixels = new MemoryStream();
+                        bitmap.Save(pixels, ImageFormat.Png);
+                        pixels.Position = 0;
+                        WebpCodec.Encode(pixels, stream, webpQuality);
+                    }
                     else bitmap.Save(stream, ImageFormat.Png);
                 }
             }
             catch { File.Delete(target); throw; }
             return;
         }
+    }
+
+    private static Image LoadImage(string source)
+    {
+        if (!Path.GetExtension(source).Equals(".webp", StringComparison.OrdinalIgnoreCase))
+            return Image.FromFile(source);
+
+        using var pixels = new MemoryStream();
+        WebpCodec.Decode(source, pixels);
+        pixels.Position = 0;
+        using var decoded = Image.FromStream(pixels);
+        // Detach from the stream, which GDI+ otherwise requires to remain open.
+        return new Bitmap(decoded);
     }
 
     private static void ReducePngColors(Bitmap bitmap, int quality)

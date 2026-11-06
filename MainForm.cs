@@ -7,6 +7,7 @@ public sealed class MainForm : Form
     private readonly NumericUpDown height = new() { Minimum = 1, Maximum = 30000, Value = 1080, Width = 85 };
     private readonly NumericUpDown quality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65 };
     private readonly NumericUpDown pngQuality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65, Enabled = false };
+    private readonly NumericUpDown webpQuality = new() { Minimum = 1, Maximum = 100, Value = 85, Width = 65, Enabled = false };
     private readonly ComboBox format = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
     private readonly TextBox output = new() { Width = 360, ReadOnly = true };
     private readonly Label status = new() { AutoSize = true, Text = "Add images to get started.", Padding = new Padding(0, 8, 0, 0) };
@@ -24,12 +25,13 @@ public sealed class MainForm : Form
             Environment.SpecialFolderOption.DoNotVerify);
         if (string.IsNullOrWhiteSpace(output.Text))
             output.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Pictures");
-        format.Items.AddRange([".jpg", ".png", "All (original)"]);
+        format.Items.AddRange([".jpg", ".png", "All (original)", ".webp"]);
         format.SelectedIndex = 0;
         format.SelectedIndexChanged += (_, _) =>
         {
-            quality.Enabled = format.SelectedIndex != 1;
-            pngQuality.Enabled = format.SelectedIndex != 0;
+            quality.Enabled = format.SelectedIndex is 0 or 2;
+            pngQuality.Enabled = format.SelectedIndex is 1 or 2;
+            webpQuality.Enabled = format.SelectedIndex is 2 or 3;
         };
         var add = new Button { Text = "Add images", AutoSize = true };
         var clear = new Button { Text = "Clear list", AutoSize = true };
@@ -46,6 +48,7 @@ public sealed class MainForm : Form
             new Label { Text = "Max height", AutoSize = true }, height,
             new Label { Text = "JPEG quality", AutoSize = true }, quality,
             new Label { Text = "PNG quality", AutoSize = true }, pngQuality,
+            new Label { Text = "WebP quality", AutoSize = true }, webpQuality,
             new Label { Text = "Output extension", AutoSize = true }, format]);
         var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(8) };
         bottom.Controls.AddRange([browse, output, optimize, status]);
@@ -60,7 +63,7 @@ public sealed class MainForm : Form
         using var dialog = new OpenFileDialog
         {
             Multiselect = true,
-            Filter = "Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tif;*.tiff|All files|*.*"
+            Filter = "Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tif;*.tiff;*.webp|All files|*.*"
         };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         foreach (var path in dialog.FileNames)
@@ -91,6 +94,7 @@ public sealed class MainForm : Form
         long jpegQuality = (long)quality.Value;
         int selectedPngQuality = (int)pngQuality.Value;
         int outputMode = format.SelectedIndex;
+        int selectedWebpQuality = (int)webpQuality.Value;
         var errors = new List<string>();
         progress.Maximum = paths.Length;
         progress.Value = 0;
@@ -108,7 +112,7 @@ public sealed class MainForm : Form
                 Directory.CreateDirectory(destination);
                 for (int i = 0; i < paths.Length; i++)
                 {
-                    try { ImageExporter.Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, selectedPngQuality, outputMode); }
+                    try { ImageExporter.Export(paths[i], destination, maxWidth, maxHeight, jpegQuality, selectedPngQuality, outputMode, selectedWebpQuality); }
                     catch (Exception ex) { errors.Add($"{Path.GetFileName(paths[i])}: {ex.Message}"); }
                     ((IProgress<int>)reporter).Report(i + 1);
                 }

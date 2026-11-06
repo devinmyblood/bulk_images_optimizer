@@ -8,4 +8,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="15.1.0" />
+  </ItemGroup>
 </Project>
