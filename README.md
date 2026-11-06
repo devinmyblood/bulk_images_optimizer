@@ -13,7 +13,7 @@ dotnet run
 
 The project explicitly uses `BulkImagesOptimizer.Program` as its startup object, which opens `MainForm`. In a Visual Studio solution with multiple projects, right-click **bulk_images_optimizer** and choose **Set as Startup Project** to launch it with F5.
 
-Add images, set maximum dimensions and JPEG quality, choose `.jpg` or `.png` under **Output extension**, choose an output folder, and click **Optimize images**. Exports keep the original base filename with the selected extension. If a filename already exists, a numeric suffix such as `_1` is added to avoid overwriting it. Aspect ratio is preserved; small images are never enlarged. JPEG flattens transparency onto white; PNG preserves transparency. Exports omit source metadata and use only the first frame of animated/multipage images. Output size may exceed the original, particularly for PNG.
+Add images, set maximum dimensions and JPEG quality, choose `.jpg`, `.png` or `.webp` under **Output extension**, choose an output folder, and click **Optimize images**. Exports keep the original base filename with the selected extension. If a filename already exists, a numeric suffix such as `_1` is added to avoid overwriting it. Aspect ratio is preserved; small images are never enlarged. JPEG flattens transparency onto white; PNG and WebP preserve transparency. Exports omit source metadata and use only the first frame of animated/multipage images. Output size may exceed the original, particularly for PNG.
 
 The UI is defined in C# in `MainForm.cs`. Running the application requires Windows; Linux can cross-compile with the .NET SDK and Windows targeting packs but cannot run WinForms.
 
@@ -23,6 +23,14 @@ The output folder defaults to the current Windows user's Pictures folder (normal
 
 Select `.png` to enable **PNG quality** (1–100). Lower values reduce RGB color precision before PNG compression, trading color detail for potentially smaller files. At 100, full RGB precision is retained. Alpha transparency is preserved at every quality setting. JPEG and PNG have separate quality inputs. PNG file sizes depend on image content and are not guaranteed to be smaller than the source, especially when converting JPEG photographs.
 
-## Mixed JPG and PNG batches
+## WebP quality
 
-Choose **All (original)** under **Output extension** to keep each JPG, JPEG and PNG image's original extension, including its letter case. Both quality inputs are enabled: **JPEG quality** applies to JPG/JPEG images and **PNG quality** applies to PNG images. Original base filenames and overwrite protection still apply. Other source formats are reported as failed in this mode; choose `.jpg` or `.png` to convert those formats instead.
+WebP images can be added directly and converted to JPEG, PNG or WebP. Select `.webp` to enable **WebP quality** (1–100), which controls lossy WebP compression while preserving alpha transparency. Animated WebP inputs export only their first frame. WebP encoding/decoding uses Magick.NET, restored automatically by NuGet.
+
+## Mixed JPG, PNG and WebP batches
+
+Choose **All (original)** under **Output extension** to keep each JPG, JPEG, PNG and WebP image's original extension, including its letter case. All three quality inputs are enabled: **JPEG quality** applies to JPG/JPEG images and **PNG quality** applies to PNG images, and **WebP quality** applies to WebP images. Original base filenames and overwrite protection still apply. Other source formats are reported as failed in this mode; choose `.jpg`, `.png` or `.webp` to convert those formats instead.
+
+## Codec smoke checks
+
+Run `dotnet run --project tests/WebpSmoke.csproj` on Linux or Windows to check output format routing and WebP encoding/decoding, dimensions and alpha at quality 1, 85 and 100. Full UI, resizing and JPEG/PNG export checks require Windows.
